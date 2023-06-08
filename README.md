@@ -1,6 +1,6 @@
 > ConsGo Website
 
-# To check the node bersion
+# To check the node version
 
 ```
 node --version
