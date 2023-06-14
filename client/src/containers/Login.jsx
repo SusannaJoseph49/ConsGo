@@ -4,6 +4,17 @@ import { FaEnvelope, FaLock} from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import {motion} from "framer-motion";
 import { buttonClick } from "../animations";
+import {useNavigate} from "react-router-dom";
+
+import {
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword
+} from "firebase/auth";
+import {app} from "../config/firebase.config";
+import { validateUserJWTToken } from "../api";
 
 const Login = () => {
   const [userEmail, setUserEmail] = useState("");
@@ -11,7 +22,76 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [confirm_password, setConfirm_password] = useState("");
 
+  const firebaseAuth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const navigate = useNavigate();
+
+  const loginWithGoogle = async () =>{
+    await signInWithPopup(firebaseAuth, provider).then(userCred => {
+      firebaseAuth.onAuthStateChanged((cred) =>{
+        if(cred){
+          cred.getIdToken().then((token)=>{
+            validateUserJWTToken(token).then(data => {
+              console.log(data);
+            });
+            navigate("/", {replace : true});
+          });
+        }
+      });
+    });
+  };
   
+  const signUpWithEmailPass = async () =>{
+    if(userEmail ==="" || password==="" || confirm_password===""){
+      //alert mess
+    }else{
+      if(password===confirm_password){
+        setUserEmail("");
+        setConfirm_password("");
+        setPassword("");
+        await createUserWithEmailAndPassword (
+          firebaseAuth, 
+          userEmail, 
+          password
+        ).then( (userCred) =>{
+          firebaseAuth.onAuthStateChanged((cred) =>{
+            if(cred){
+              cred.getIdToken().then((token)=>{
+                validateUserJWTToken(token).then((data) => {
+                  console.log(data);
+                });
+                navigate("/", {replace : true});
+              });
+            }
+          });
+        });
+      }else{
+  //alert mess
+      }
+    }
+  };
+
+  const signInWithEmailPass = async () =>{
+    if( userEmail !=="" && password!=="") {
+      await signInWithEmailAndPassword(firebaseAuth, userEmail, password).then(
+        (userCred) => {
+          firebaseAuth.onAuthStateChanged((cred) => {
+            if(cred){
+              cred.getIdToken().then((token) =>{
+                validateUserJWTToken(token).then((data) => {
+                  console.log(data);
+                });
+                navigate("/", {replace : true});
+              });
+            }
+          });
+        }
+      );
+    } else {
+
+    }
+  };
 
   return (
     <div className="w-screen h-screen overflow-hidden flex justify-center items-center">
@@ -56,12 +136,15 @@ const Login = () => {
         {isSignUp ? (
         <motion.button 
         {...buttonClick} 
-        className="w-full px-4 py-2 rounded-md cursor-pointer bg-blue-400 text-white text-xl capitalize hover:bg-blue-500 transition-all duration-150">
+        className="w-full px-4 py-2 rounded-md cursor-pointer bg-blue-400 text-white text-xl capitalize hover:bg-blue-500 transition-all duration-150"
+        onClick={signUpWithEmailPass}
+        >
           Create Account
         </motion.button>
         ) : (
         <motion.button 
         {...buttonClick} 
+        onClick={signInWithEmailPass}
         className="w-full px-4 py-2 rounded-md cursor-pointer bg-blue-400 text-white text-xl capitalize hover:bg-blue-500 transition-all duration-150">
           Log in
         </motion.button>
@@ -69,9 +152,12 @@ const Login = () => {
         <motion.div 
         {...buttonClick}
         className="flex items-center cursor-pointer rounded-lg justify-center gap-4 w-full py-2 border-2 border-slate-400"
+        onClick={loginWithGoogle}
         >
         <FcGoogle className="text-3xl"/>
-        <p className="capitalize text-base text-headingColor">Sign Up with Google</p>
+        <p className="capitalize text-base text-headingColor">
+          Sign Up with Google
+        </p>
         </motion.div>
         
         {!isSignUp ? (
